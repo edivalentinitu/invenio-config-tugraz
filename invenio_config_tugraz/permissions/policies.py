@@ -580,3 +580,4 @@ class TUGrazRDMRequestsPermissionPolicy(RDMRequestsPermissionPolicy):
     can_action_review = RDMRequestsPermissionPolicy.can_action_accept
     can_action_critique = RDMRequestsPermissionPolicy.can_action_accept
     can_action_resubmit = can_action_submit
+    can_action_pending_resubmission = can_action_resubmit
