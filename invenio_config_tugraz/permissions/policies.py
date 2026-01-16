@@ -41,20 +41,20 @@ from invenio_communities.generators import (
     IfCommunityDeleted,
     IfMemberPolicyClosed,
     IfRecordSubmissionPolicyClosed,
-    ReviewPolicy,
 )
 from invenio_communities.generators import IfRestricted as IfRestrictedCommunity
-from invenio_communities.permissions import (
-    # at time of writing, BasePermissionPolicy is originally from `invenio_records_permissions`
-    # however, this import should trace the base class of `CommunityPermissionPolicy`
-    # importing it from invenio-communities better guarantees that
+from invenio_communities.generators import (
+    ReviewPolicy,
+)
+from invenio_communities.permissions import (  # at time of writing, BasePermissionPolicy is originally from `invenio_records_permissions`; however, this import should trace the base class of `CommunityPermissionPolicy`; importing it from invenio-communities better guarantees that
     BasePermissionPolicy,
 )
 from invenio_curations.requests.curation import CurationRequest
 from invenio_curations.services.generators import (
     CurationModerators,
+    IfCurationRecordBasedExists,
     IfCurationRequestAccepted,
-    IfCurationRequestExists,
+    IfCurationRequestBasedExists,
     IfRequestTypes,
     TopicPermission,
 )
@@ -131,7 +131,7 @@ class TUGrazRDMRecordPermissionPolicy(RecordPermissionPolicy):
         SecretLinks("preview"),
         SubmissionReviewer(),
         UserManager,
-        IfCurationRequestExists(then_=[CurationModerators()], else_=[]),
+        IfCurationRecordBasedExists(then_=[CurationModerators()], else_=[]),
     ]
     can_view = can_preview + [
         AccessGrant("view"),
@@ -542,15 +542,23 @@ class TUGrazRDMRequestsPermissionPolicy(RDMRequestsPermissionPolicy):
     )
 
     # Only allow community-submission requests to be accepted after the rdm-curation request has been accepted
-    can_action_accept: Final = [
-        IfRequestTypes(
-            request_types=[CommunitySubmission],
+    # (if curation request exists).
+    _can_communities_curation_accept: Final = [
+        IfCurationRequestBasedExists(
             then_=[
                 IfCurationRequestAccepted(
                     then_=RDMRequestsPermissionPolicy.can_action_accept,
                     else_=[],
                 ),
             ],
+            else_=RDMRequestsPermissionPolicy.can_action_accept,
+        ),
+    ]
+
+    can_action_accept: Final = [
+        IfRequestTypes(
+            request_types=[CommunitySubmission],
+            then_=_can_communities_curation_accept,
             else_=RDMRequestsPermissionPolicy.can_action_accept,
         ),
     ]
